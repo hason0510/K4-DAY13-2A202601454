@@ -230,6 +230,9 @@ def render_errors_panel(frame: pd.DataFrame) -> None:
         ],
         axis=1,
     ).fillna(0)
+    # Khi không có request_failed, concat với Series rỗng có thể làm mất tên
+    # DatetimeIndex. Gán lại tên để reset_index() luôn tạo cột `ts`.
+    timeline.index.name = "ts"
     timeline["error_rate_pct"] = (
         timeline["failures"]
         .div(timeline["requests"].replace(0, pd.NA))
