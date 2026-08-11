@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import time
+from contextlib import nullcontext
 from dataclasses import dataclass
 
 from structlog.contextvars import get_contextvars
@@ -44,9 +45,15 @@ class LabAgent:
         # correlation_id do CorrelationIdMiddleware bind; đọc ra để trace và log
         # có chung một khoá tra cứu theo từng request.
         correlation_id = str(get_contextvars().get("correlation_id") or "")
-        docs = retrieve(message)
         langfuse_client = get_langfuse_client()
         trace_id = self._current_trace_id(langfuse_client)
+
+        # Tách hai bước tốn thời gian thành span riêng. Nếu không, waterfall chỉ
+        # có một vạch và không khoanh vùng được retrieval hay LLM mới là thủ phạm.
+        with self._child_span(langfuse_client, "retrieve") as span:
+            docs = retrieve(message)
+            self._update_span(span, output={"doc_count": len(docs)})
+
         prompt = resolve_prompt(
             langfuse_client,
             feature=feature,
@@ -54,7 +61,16 @@ class LabAgent:
             message=message,
             enabled=tracing_enabled(),
         )
-        response = self.llm.generate(prompt.text)
+
+        with self._child_span(langfuse_client, "llm_generate") as span:
+            response = self.llm.generate(prompt.text)
+            self._update_span(
+                span,
+                output={
+                    "model": self.model,
+                    "output_tokens": response.usage.output_tokens,
+                },
+            )
         quality_score = self._heuristic_quality(message, response.text, docs)
         latency_ms = int((time.perf_counter() - started) * 1000)
         cost_usd = self._estimate_cost(response.usage.input_tokens, response.usage.output_tokens)
@@ -114,6 +130,31 @@ class LabAgent:
             correlation_id=correlation_id,
             trace_id=trace_id,
         )
+
+    @staticmethod
+    def _child_span(client, name: str):
+        """Span con cho một bước trong request.
+
+        Trả về context manager rỗng khi client không hỗ trợ span (chưa bật
+        Langfuse, hoặc client giả trong test) — tracing không được phép làm
+        hỏng đường request.
+        """
+        starter = getattr(client, "start_as_current_span", None)
+        if not callable(starter):
+            return nullcontext(None)
+        try:
+            return starter(name=name)
+        except Exception:  # pragma: no cover
+            return nullcontext(None)
+
+    @staticmethod
+    def _update_span(span, **kwargs) -> None:
+        if span is None:
+            return
+        try:
+            span.update(**kwargs)
+        except Exception:  # pragma: no cover
+            return
 
     @staticmethod
     def _current_trace_id(client) -> str:

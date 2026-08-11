@@ -61,6 +61,37 @@ def test_agent_links_prompt_version_to_trace_and_generation(monkeypatch) -> None
     assert generation_update["metadata"]["prompt_version"] == "3"
 
 
+class RecordingSpan:
+    def __init__(self, name: str, sink: list) -> None:
+        self.name = name
+        self._sink = sink
+
+    def update(self, **kwargs) -> None:
+        self._sink.append({"name": self.name, **kwargs})
+
+
+class SpanRecordingClient(RecordingLangfuseClient):
+    """Thêm khả năng tạo span con để kiểm tra cấu trúc waterfall."""
+
+    def __init__(self) -> None:
+        super().__init__()
+        self.span_names: list[str] = []
+        self.span_updates: list[dict] = []
+
+    def start_as_current_span(self, *, name: str):
+        self.span_names.append(name)
+        span = RecordingSpan(name, self.span_updates)
+
+        class _Ctx:
+            def __enter__(self_inner):
+                return span
+
+            def __exit__(self_inner, *exc) -> bool:
+                return False
+
+        return _Ctx()
+
+
 def _run_with_recording_client(monkeypatch, client) -> agent_module.AgentResult:
     monkeypatch.setenv("LANGFUSE_PUBLIC_KEY", "test-public-key")
     monkeypatch.setenv("LANGFUSE_SECRET_KEY", "test-secret-key")
@@ -92,6 +123,25 @@ def test_agent_result_exposes_prompt_version_without_a_second_fetch(monkeypatch)
     assert (result.prompt_name, result.prompt_label) == ("day13-chat", "production")
     assert result.prompt_version == "3"
     assert result.prompt_source == "langfuse"
+
+
+def test_retrieval_and_llm_get_their_own_spans(monkeypatch) -> None:
+    """Khong tach span thi waterfall khong khoanh vung duoc buoc nao cham."""
+    client = SpanRecordingClient()
+    _run_with_recording_client(monkeypatch, client)
+
+    assert client.span_names == ["retrieve", "llm_generate"]
+    by_name = {update["name"]: update["output"] for update in client.span_updates}
+    assert by_name["retrieve"]["doc_count"] >= 1
+    assert by_name["llm_generate"]["output_tokens"] > 0
+
+
+def test_agent_still_runs_when_the_client_cannot_create_spans(monkeypatch) -> None:
+    """Client khong ho tro span (chua bat Langfuse) van phai tra ket qua."""
+    result = _run_with_recording_client(monkeypatch, RecordingLangfuseClient())
+
+    assert result.answer
+    assert result.tokens_out > 0
 
 
 def test_missing_correlation_id_does_not_add_an_empty_tag(monkeypatch) -> None:

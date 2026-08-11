@@ -18,6 +18,9 @@ Project Langfuse: `cloud.langfuse.com`, project id `cmsocq40u01lyad0duqx8wy1t`.
 | ≥ 10 trace có metadata | Xong (12 trace ghi lại, 15 trace trên project) | `traces.jsonl` |
 | Mọi trace `prompt_source=langfuse` | Xong, 0 fallback | `traces.jsonl` |
 | Nối được Logs ↔ Traces | Xong (thêm mới, xem §4) | trace `01971248bfd82ff06d2b171e4619487a` |
+| Span riêng cho retrieve và LLM | Xong (thêm mới, xem §3b) | trace `becbc33db72e2c6e6b0ecfe898798bab` |
+
+Hướng dẫn chụp 7 ảnh evidence nằm ở [role-b-screenshots.md](role-b-screenshots.md).
 
 ## 2. Prompt versioning
 
@@ -42,14 +45,40 @@ Hai trace chứng minh hai version/label khác nhau — dùng cặp này cho §4
 
 | Mục đích | Label | Version | Trace ID |
 |---|---|---|---|
-| **Baseline** | `baseline` | v1 | `09a7b41e6623e8a26ff77b625f6be806` |
-| **Candidate** | `candidate` | v2 | `bdbb5717ebda49f38c2ab0efd1c57759` |
-| **Sau khi đổi label** | `production` | v2 | `545be89e8741bdd21875975fffc29761` |
-| **Sau khi rollback** | `production` | v1 | `9c7bead5ed32fbf7206ddf8ff5edc1b5` |
+| **Baseline** | `baseline` | v1 | `d73ff9d0fb4b4fc3281926406ebcd80d` |
+| **Candidate** | `candidate` | v2 | `9058c071628cebe9f147b5645f35cda1` |
+| **Sau khi đổi label** | `production` | v2 | `0cdec6c7a56f755d01c8ce0cea3e5a97` |
+| **Sau khi rollback** | `production` | v1 | `f13649989e9e8e3895e8b70d2a5cea5d` |
 
 Ba trace cuối là bằng chứng rollback: cùng label `production` nhưng version đổi từ 1 → 2 → 1, và request thật sau mỗi lần đổi đã lấy đúng version tương ứng. Danh sách đủ 12 trace kèm latency/token/cost nằm trong `submission/evidence/traces.jsonl`.
 
 URL mẫu: `https://cloud.langfuse.com/project/cmsocq40u01lyad0duqx8wy1t/traces/<trace_id>`
+
+## 3b. Span cho từng bước — khoanh vùng root cause
+
+Ban đầu mỗi trace chỉ có một span `run` bao trọn request, nên waterfall không trả lời được câu hỏi của Checkpoint 3 bước 3 (*"khoanh vùng span bất thường"*): nhìn vào chỉ biết request chậm, không biết retrieval hay LLM chậm.
+
+Đã tách `retrieve()` và `llm.generate()` thành span con trong `app/agent.py`. Cấu trúc trace bây giờ:
+
+```
+SPAN       chat
+  GENERATION run
+    SPAN     retrieve
+    SPAN     llm_generate
+```
+
+Đo thật trên Langfuse với cùng một input:
+
+| | `retrieve` | `llm_generate` | tổng request |
+|---|---:|---:|---:|
+| Bình thường (`0bdb2a4a35d53ca78223030b25776e3e`) | 0 ms | 151 ms | 1137 ms |
+| Bật `rag_slow` (`becbc33db72e2c6e6b0ecfe898798bab`) | **2500 ms** | 151 ms | 2653 ms |
+
+Retrieval chiếm 94% thời gian và tổng vượt ngưỡng 2000 ms trong `config/challenge.json`. Đây là bằng chứng trực tiếp cho bước Traces của vai trò D.
+
+Span được tạo qua helper `_child_span()` có fallback `nullcontext`, nên khi chưa bật Langfuse hoặc client không hỗ trợ span thì request vẫn chạy bình thường.
+
+Một quan sát phụ: ở trace đầu tiên sau khi khởi động, tổng 1137 ms nhưng hai span con chỉ chiếm 151 ms. Khoảng ~986 ms còn lại là lần fetch prompt đầu tiên từ Langfuse khi cache còn lạnh; từ request thứ hai trở đi khoảng trống này biến mất. Nếu muốn waterfall giải thích được 100% thời gian thì cần bọc thêm `resolve_prompt()` bằng một span nữa — chưa làm.
 
 ## 4. Thay đổi code — cầu nối Logs ↔ Traces
 

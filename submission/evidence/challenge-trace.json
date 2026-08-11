@@ -1,5 +1,9 @@
 {
-  "trace_id": "req-c960ff3a",
+  "challenge_id": "day13-k4-observability-v1",
+  "correlation_id": "req-c960ff3a",
+  "trace_id": "4e38c2300b16d7d932e6ed893d5392a0",
+  "trace_url": "https://cloud.langfuse.com/project/cmsocq40u01lyad0duqx8wy1t/traces/4e38c2300b16d7d932e6ed893d5392a0",
+  "trace_lookup": "python scripts/trace_evidence.py --find-cid req-c960ff3a",
   "logs": [
     {
       "service": "api",
@@ -37,5 +41,10 @@
       "ts": "2026-08-11T09:24:38.940290Z"
     }
   ],
-  "root_cause_analysis": "The incident 'rag_slow' enabled time.sleep(2.5) in the retrieve method. The total latency reported by the client was ~14 seconds due to head-of-line blocking."
+  "root_cause_analysis": "The incident 'rag_slow' enabled time.sleep(2.5) in app/mock_rag.py retrieve(). Because /chat is an 'async def' endpoint, the blocking sleep runs on the event loop and serialises concurrent requests, so the client observed up to ~14.8s while a single server-side request took ~3.5s.",
+  "span_breakdown_ms": {
+    "retrieve": 2500,
+    "llm_generate": 151,
+    "comment": "Do tren trace rag_slow becbc33db72e2c6e6b0ecfe898798bab; retrieve chiem ~94% thoi gian request."
+  }
 }
