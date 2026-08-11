@@ -1,0 +1,37 @@
+[
+  {
+    "service": "api",
+    "payload": {
+      "message_preview": "Contact [REDACTED_PHONE_VN], CCCD [REDACTED_CCCD], card [REDACTED_CREDIT_CARD], ..."
+    },
+    "event": "request_received",
+    "correlation_id": "req-cafebabe",
+    "model": "claude-sonnet-4-5",
+    "session_id": "role1-evidence",
+    "feature": "qa",
+    "user_id_hash": "9f2957b4c1c1",
+    "env": "dev",
+    "level": "info",
+    "ts": "2026-08-11T08:04:00.933755Z"
+  },
+  {
+    "service": "api",
+    "latency_ms": 1131,
+    "tokens_in": 41,
+    "tokens_out": 91,
+    "cost_usd": 0.001488,
+    "quality_score": 0.8,
+    "payload": {
+      "answer_preview": "Starter answer. Teams should improve this output logic and add better quality ch..."
+    },
+    "event": "response_sent",
+    "correlation_id": "req-cafebabe",
+    "model": "claude-sonnet-4-5",
+    "session_id": "role1-evidence",
+    "feature": "qa",
+    "user_id_hash": "9f2957b4c1c1",
+    "env": "dev",
+    "level": "info",
+    "ts": "2026-08-11T08:04:02.068255Z"
+  }
+]

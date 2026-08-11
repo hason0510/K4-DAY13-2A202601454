@@ -1,0 +1,23 @@
+Role 1 - Logging & PII validation
+Date: 2026-08-11
+
+End-to-end checks:
+- API health: HTTP 200
+- Load test requests: 10/10 HTTP 200
+- PII test request: HTTP 200
+- Supplied/returned correlation ID: req-cafebabe
+
+--- Lab Verification Results ---
+Total log records analyzed: 23
+Records with missing required fields: 0
+Records with missing enrichment (context): 0
+Unique correlation IDs found: 11
+Potential PII leaks detected: 0
+
+--- Grading Scorecard (Estimates) ---
++ [PASSED] Basic JSON schema
++ [PASSED] Correlation ID propagation
++ [PASSED] Log enrichment
++ [PASSED] PII scrubbing
+
+Estimated Score: 100/100
