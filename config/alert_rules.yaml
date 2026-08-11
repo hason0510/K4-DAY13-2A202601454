@@ -1,19 +1,24 @@
 alerts:
-  - name: TODO_alert_1
-    severity: TODO
-    condition: TODO
+  - name: high_p95_latency
+    severity: warning
+    sli: latency_p95_ms
+    condition: "latency_p95_ms > 3000 for 5m"
     type: symptom-based
-    owner: TODO
+    owner: observability-owner
     runbook: docs/alerts.md#alert-1
-  - name: TODO_alert_2
-    severity: TODO
-    condition: TODO
+
+  - name: high_error_rate
+    severity: critical
+    sli: error_rate_pct
+    condition: "error_rate_pct > 2 for 5m"
     type: symptom-based
-    owner: TODO
+    owner: api-owner
     runbook: docs/alerts.md#alert-2
-  - name: TODO_alert_3
-    severity: TODO
-    condition: TODO
-    type: symptom-based
-    owner: TODO
+
+  - name: daily_cost_budget_exceeded
+    severity: warning
+    sli: daily_cost_usd
+    condition: "daily_cost_usd > 2.5 for 15m"
+    type: slo-based
+    owner: cost-owner
     runbook: docs/alerts.md#alert-3
