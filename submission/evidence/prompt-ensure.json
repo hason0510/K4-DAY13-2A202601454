@@ -1,0 +1,36 @@
+{
+  "prompt_name": "day13-chat",
+  "checked_at": "2026-08-11T08:07:12.069440+00:00",
+  "labels": [
+    {
+      "label": "production",
+      "found": true,
+      "version": 1,
+      "labels": [
+        "baseline",
+        "production"
+      ],
+      "prompt": "Feature={{feature}}\nDocs={{docs}}\nQuestion={{message}}"
+    },
+    {
+      "label": "baseline",
+      "found": true,
+      "version": 1,
+      "labels": [
+        "baseline",
+        "production"
+      ],
+      "prompt": "Feature={{feature}}\nDocs={{docs}}\nQuestion={{message}}"
+    },
+    {
+      "label": "candidate",
+      "found": true,
+      "version": 2,
+      "labels": [
+        "candidate",
+        "latest"
+      ],
+      "prompt": "You are an observability assistant. Answer in at most three sentences and name the document you used.\nFeature={{feature}}\nDocs={{docs}}\nQuestion={{message}}"
+    }
+  ]
+}

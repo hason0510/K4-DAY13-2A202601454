@@ -3,6 +3,8 @@ from __future__ import annotations
 import time
 from dataclasses import dataclass
 
+from structlog.contextvars import get_contextvars
+
 from . import metrics
 from .mock_llm import FakeLLM
 from .mock_rag import retrieve
@@ -19,6 +21,16 @@ class AgentResult:
     tokens_out: int
     cost_usd: float
     quality_score: float
+    # Prompt đã dùng cho request này. Có default để không phá caller cũ; nhờ đó
+    # scripts/trace_evidence.py ghi được version thật thay vì suy đoán lại.
+    prompt_name: str = ""
+    prompt_label: str = ""
+    prompt_version: str = ""
+    prompt_source: str = ""
+    # Hai đầu của cầu nối Logs <-> Traces. Rỗng khi chạy ngoài request HTTP
+    # (correlation_id) hoặc khi chưa bật Langfuse (trace_id).
+    correlation_id: str = ""
+    trace_id: str = ""
 
 
 class LabAgent:
@@ -29,8 +41,12 @@ class LabAgent:
     @observe(as_type="generation", capture_input=False, capture_output=False)
     def run(self, user_id: str, feature: str, session_id: str, message: str) -> AgentResult:
         started = time.perf_counter()
+        # correlation_id do CorrelationIdMiddleware bind; đọc ra để trace và log
+        # có chung một khoá tra cứu theo từng request.
+        correlation_id = str(get_contextvars().get("correlation_id") or "")
         docs = retrieve(message)
         langfuse_client = get_langfuse_client()
+        trace_id = self._current_trace_id(langfuse_client)
         prompt = resolve_prompt(
             langfuse_client,
             feature=feature,
@@ -46,7 +62,9 @@ class LabAgent:
         langfuse_client.update_current_trace(
             user_id=hash_user_id(user_id),
             session_id=session_id,
-            tags=["lab", feature, self.model],
+            # Tag `cid:` cho phép tìm đúng trace từ một dòng log trên UI Langfuse.
+            tags=["lab", feature, self.model]
+            + ([f"cid:{correlation_id}"] if correlation_id else []),
             metadata={
                 "prompt_name": prompt.name,
                 "prompt_label": prompt.label,
@@ -57,6 +75,7 @@ class LabAgent:
         langfuse_client.update_current_generation(
             model=self.model,
             metadata={
+                "correlation_id": correlation_id,
                 "doc_count": len(docs),
                 "query_preview": summarize_text(message),
                 "prompt_name": prompt.name,
@@ -88,7 +107,24 @@ class LabAgent:
             tokens_out=response.usage.output_tokens,
             cost_usd=cost_usd,
             quality_score=quality_score,
+            prompt_name=prompt.name,
+            prompt_label=prompt.label,
+            prompt_version=prompt.version,
+            prompt_source=prompt.source,
+            correlation_id=correlation_id,
+            trace_id=trace_id,
         )
+
+    @staticmethod
+    def _current_trace_id(client) -> str:
+        """Trace ID của span đang chạy, rỗng nếu chưa bật Langfuse."""
+        getter = getattr(client, "get_current_trace_id", None)
+        if not callable(getter):
+            return ""
+        try:
+            return str(getter() or "")
+        except Exception:  # pragma: no cover - không để tracing làm hỏng request
+            return ""
 
     def _estimate_cost(self, tokens_in: int, tokens_out: int) -> float:
         input_cost = (tokens_in / 1_000_000) * 3
