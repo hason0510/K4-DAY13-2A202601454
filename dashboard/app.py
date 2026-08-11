@@ -324,7 +324,7 @@ def render_cost_panel(frame: pd.DataFrame) -> None:
     metric_total.metric(
         "Total cost",
         f"${total_cost:,.4f}",
-        f"${total_cost - COST_THRESHOLD_USD:,.4f} vs threshold",
+        f"{total_cost - COST_THRESHOLD_USD:,.4f} USD vs threshold",
         delta_color="inverse",
     )
     metric_average.metric("Average/request", f"${average_cost:,.6f}")
