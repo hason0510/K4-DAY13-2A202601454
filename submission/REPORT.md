@@ -4,7 +4,7 @@
 
 - Tên nhóm: **ChillGuys**
 - Repository URL: https://github.com/hason0510/K4-DAY13-2A202601454
-- Commit SHA cuối: *(điền sau khi push lần cuối — lấy bằng `git rev-parse HEAD`)*
+- Commit SHA cuối: 52f0a0853fe9da20a5040bb95b17cb75f49b5150
 - Thành viên và vai trò:
 
 | Thành viên | MSSV | Vai trò | Tài khoản Git |
