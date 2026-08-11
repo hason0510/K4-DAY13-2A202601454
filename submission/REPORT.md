@@ -38,13 +38,13 @@
 
 ## 6. Điều tra challenge
 
-- Challenge ID:
-- Triệu chứng từ metrics:
-- Trace ID liên quan:
-- Log line/correlation ID liên quan:
-- Root cause:
-- Fix action:
-- Preventive measure:
+- Challenge ID: day13-k4-observability-v1
+- Triệu chứng từ metrics: P95 latency tăng vọt > 2000ms, hệ thống xử lý các request bị nghẽn và thời gian phản hồi tăng lên tới ~14.8s (ở chế độ đồng thời).
+- Trace ID liên quan: req-c960ff3a (hoặc req-78353376)
+- Log line/correlation ID liên quan: correlation_id="req-c960ff3a", sự kiện request_received và response_sent ghi nhận latency_ms=3549.
+- Root cause: Incident `rag_slow` được kích hoạt làm hàm `retrieve()` trong `app/mock_rag.py` gọi `time.sleep(2.5)`. Vì sử dụng hàm sleep đồng bộ (`time.sleep`) trong event loop, nó gây ra tình trạng block toàn bộ hệ thống (head-of-line blocking), khiến các request chạy song song bị tắc nghẽn dây chuyền.
+- Fix action: Tắt incident bằng cách chạy `python scripts/inject_incident.py --disable` hoặc gỡ bỏ đoạn code block luồng `time.sleep` ra khỏi `mock_rag.py`.
+- Preventive measure: Thiết lập Alert cho P95 Latency; rà soát source code để đảm bảo không sử dụng code blocking (như `time.sleep`) trong hàm xử lý, thay vào đó dùng `asyncio.sleep()` hoặc offload sang thread pool.
 
 ## 7. Đóng góp cá nhân
 

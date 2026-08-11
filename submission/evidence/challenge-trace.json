@@ -1,0 +1,41 @@
+{
+  "trace_id": "req-c960ff3a",
+  "logs": [
+    {
+      "service": "api",
+      "payload": {
+        "message_preview": "How should an engineer investigate tail latency?"
+      },
+      "event": "request_received",
+      "correlation_id": "req-c960ff3a",
+      "model": "claude-sonnet-4-5",
+      "feature": "monitoring",
+      "user_id_hash": "cb22af258a5e",
+      "session_id": "k4-challenge-s02",
+      "env": "dev",
+      "level": "info",
+      "ts": "2026-08-11T09:24:34.706860Z"
+    },
+    {
+      "service": "api",
+      "latency_ms": 3549,
+      "tokens_in": 34,
+      "tokens_out": 134,
+      "cost_usd": 0.002112,
+      "quality_score": 0.9,
+      "payload": {
+        "answer_preview": "Starter answer. Teams should improve this output logic and add better quality ch..."
+      },
+      "event": "response_sent",
+      "correlation_id": "req-c960ff3a",
+      "model": "claude-sonnet-4-5",
+      "feature": "monitoring",
+      "user_id_hash": "cb22af258a5e",
+      "session_id": "k4-challenge-s02",
+      "env": "dev",
+      "level": "info",
+      "ts": "2026-08-11T09:24:38.940290Z"
+    }
+  ],
+  "root_cause_analysis": "The incident 'rag_slow' enabled time.sleep(2.5) in the retrieve method. The total latency reported by the client was ~14 seconds due to head-of-line blocking."
+}
