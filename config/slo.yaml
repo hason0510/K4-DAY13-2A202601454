@@ -1,16 +1,23 @@
 service: day13-observability-lab
 window: 28d
+
 slis:
   latency_p95_ms:
     objective: 3000
     target: 99.5
-    note: Replace with your group's target
+    reason: P95 dưới 3000 ms giúp phần lớn người dùng nhận phản hồi trong thời gian chấp nhận được.
+
   error_rate_pct:
     objective: 2
     target: 99.0
+    reason: Tỷ lệ lỗi dưới 2% giúp duy trì độ tin cậy của API.
+
   daily_cost_usd:
     objective: 2.5
     target: 100.0
+    reason: Chi phí hàng ngày dưới 2.5 USD giúp kiểm soát chi phí vận hành hiệu quả.
+
   quality_score_avg:
     objective: 0.75
     target: 95.0
+    reason: Quality score trung bình tối thiểu 0.75 để phát hiện phản hồi kém chất lượng.
